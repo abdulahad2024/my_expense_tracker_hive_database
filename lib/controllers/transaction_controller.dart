@@ -21,6 +21,7 @@ class TransactionController extends GetxController {
       transactions.assignAll(data);
     } catch (e) {
       CustomToast.showError('ডাটা লোড করতে সমস্যা হয়েছে: $e');
+      print('Error loading transactions: $e');
     } finally {
       isLoading.value = false;
     }

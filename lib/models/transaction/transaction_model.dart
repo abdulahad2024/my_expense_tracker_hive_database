@@ -4,7 +4,7 @@ class TransactionModel {
   final double amount;
   final String type;
   final DateTime dateTime;
-  final String? category;
+  final String? note; // স্ক্রিনের ক্যাটাগরি ভ্যালু এখানে স্টোর হয়
 
   TransactionModel({
     required this.id,
@@ -12,7 +12,7 @@ class TransactionModel {
     required this.amount,
     required this.type,
     required this.dateTime,
-    this.category,
+    this.note,
   });
 
   factory TransactionModel.fromMap(Map<dynamic, dynamic> map) {
@@ -24,7 +24,8 @@ class TransactionModel {
       dateTime: map['dateTime'] != null
           ? DateTime.parse(map['dateTime'])
           : DateTime.now(),
-      category: map['category'],
+      // 💡 সেফটি ফিক্স: ডাটাবেজে যদি 'category' বা 'note' যেকোনো নামে সেভ থাকে, সেটিকে ক্যাচ করবে
+      note: map['category'] ?? map['note'],
     );
   }
 
@@ -35,7 +36,7 @@ class TransactionModel {
       'amount': amount,
       'type': type,
       'dateTime': dateTime.toIso8601String(),
-      'category': category,
+      'category': note, // ডাটাবেজে 'category' কি (Key) তেই রাইট হবে
     };
   }
 }
