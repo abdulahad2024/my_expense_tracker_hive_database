@@ -13,21 +13,19 @@ class TransactionController extends GetxController {
     loadTransactions();
   }
 
-  // --- READ ---
   void loadTransactions() {
     try {
       isLoading.value = true;
       final data = TransactionServices.getAllTransactions();
       transactions.assignAll(data);
     } catch (e) {
-      CustomToast.showError('ডাটা লোড করতে সমস্যা হয়েছে: $e');
+      CustomToast.showError('Failed to load transactions: $e');
       print('Error loading transactions: $e');
     } finally {
       isLoading.value = false;
     }
   }
 
-  // --- CREATE ---
   Future<bool> addTransaction({
     required String title,
     required double amount,
@@ -44,15 +42,14 @@ class TransactionController extends GetxController {
         note: note,
       );
       loadTransactions();
-      CustomToast.showSuccess('ট্রানজেকশনটি সফলভাবে যোগ করা হয়েছে।');
+      CustomToast.showSuccess('Transaction added successfully.');
       return true;
     } catch (e) {
-      CustomToast.showError('যোগ করা সম্ভব হয়নি: $e');
+      CustomToast.showError('Failed to add transaction: $e');
       return false;
     }
   }
 
-  // --- UPDATE ---
   Future<bool> updateTransaction({
     required String id,
     required String title,
@@ -71,26 +68,24 @@ class TransactionController extends GetxController {
         note: note,
       );
       loadTransactions();
-      CustomToast.showSuccess('সফলভাবে আপডেট করা হয়েছে।');
+      CustomToast.showSuccess('Updated successfully.');
       return true;
     } catch (e) {
-      CustomToast.showError('আপডেট করা সম্ভব হয়নি: $e');
+      CustomToast.showError('Update failed: $e');
       return false;
     }
   }
 
-  // --- DELETE ---
   Future<void> deleteTransaction(String id) async {
     try {
       await TransactionServices.deleteTransaction(id);
       loadTransactions();
-      CustomToast.showSuccess('ট্রানজেকশনটি সফলভাবে মুছে ফেলা হয়েছে।');
+      CustomToast.showSuccess('Transaction deleted successfully.');
     } catch (e) {
-      CustomToast.showError('মুছে ফেলা সম্ভব হয়নি: $e');
+      CustomToast.showError('Delete failed: $e');
     }
   }
 
-  // --- CALCULATIONS ---
   double get totalIncome => transactions
       .where((t) => t.type == 'Income')
       .fold(0.0, (sum, item) => sum + item.amount);
@@ -101,6 +96,5 @@ class TransactionController extends GetxController {
 
   double get totalBalance => totalIncome - totalExpense;
 
-  List<TransactionModel> get recentTransactions =>
-      transactions.take(5).toList();
+  List<TransactionModel> get recentTransactions => transactions.take(5).toList();
 }

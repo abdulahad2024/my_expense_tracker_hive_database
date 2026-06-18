@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:my_expense_tracker_hive_database/core/themes/color.dart';
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -44,7 +45,6 @@ class CustomTextField extends StatelessWidget {
       style: const TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w500,
-        color: Color(0xFF212121),
       ),
       decoration: InputDecoration(
         hintText: hintText,
@@ -54,21 +54,26 @@ class CustomTextField extends StatelessWidget {
           fontWeight: FontWeight.w400,
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Theme.of(context).cardColor,
 
-        // আইকন সেটিংস
         prefixIcon: prefixIcon != null
-            ? Icon(prefixIcon, color: theme.colorScheme.primary.withOpacity(0.7), size: 22)
+            ? Icon(
+                prefixIcon,
+                color: primaryColor,
+                size: 22,
+              )
             : null,
         suffixIcon: suffixIcon != null
             ? InkWell(
-          onTap: onSuffixTap,
-          child: Icon(suffixIcon, color: Colors.grey.shade500, size: 22),
-        )
+                onTap: onSuffixTap,
+                child: Icon(suffixIcon, color: Colors.grey.shade500, size: 22),
+              )
             : null,
 
-        // কন্টেন্ট প্যাডিং
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
 
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -76,7 +81,7 @@ class CustomTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+          borderSide: BorderSide(color: primaryColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),

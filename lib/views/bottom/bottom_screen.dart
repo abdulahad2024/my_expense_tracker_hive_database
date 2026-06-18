@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:my_expense_tracker_hive_database/core/helper/custom_toast.dart';
+import 'package:my_expense_tracker_hive_database/core/themes/color.dart';
 import 'package:my_expense_tracker_hive_database/views/analytics/analytics_screen.dart';
 import 'package:my_expense_tracker_hive_database/views/dashboard/dashboard_screen.dart';
 import 'package:my_expense_tracker_hive_database/views/settings/setting_screen.dart';
@@ -16,8 +19,6 @@ class BottomScreen extends StatefulWidget {
 class _BottomScreenState extends State<BottomScreen> {
   int _currentIndex = 0;
 
-  // 💡 সমাধান ১: রানটাইম JS/Web ক্র্যাশ এড়াতে অন-ডিমান্ড মেথডের মাধ্যমে স্ক্রিন বিল্ড করা
-  // 💡 সমাধান ২: AnimatedSwitcher-এর পারফেক্ট ট্রানজিশনের জন্য প্রতিটিতে আলাদা 'ValueKey' যুক্ত করা হয়েছে
   Widget _getSelectedScreen(int index) {
     switch (index) {
       case 0:
@@ -27,7 +28,7 @@ class _BottomScreenState extends State<BottomScreen> {
       case 2:
         return const TransactionListScreen(key: ValueKey(2));
       case 3:
-        return SettingScreen(key: const ValueKey(3)); // আপনার এই স্ক্রিনটি const না হলে সমস্যা নেই, key কাজ করবে
+        return SettingScreen(key: const ValueKey(3));
       default:
         return const DashboardScreen(key: ValueKey(0));
     }
@@ -35,90 +36,102 @@ class _BottomScreenState extends State<BottomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    DateTime? _lastPressedAt;
+
     final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
+    final bool isDarkMode = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      // বটম বারের নিচের অংশ সুন্দরভাবে দেখানোর জন্য extendBody ট্রু থাকবে
-      extendBody: true,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
 
-      // নির্দিষ্ট স্ক্রিনটি মেথড থেকে কল করা হচ্ছে এবং স্মুথ অ্যানিমেশন হ্যান্ডেল করা হচ্ছে
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        switchInCurve: Curves.easeInOut,
-        switchOutCurve: Curves.easeInOut,
-        child: _getSelectedScreen(_currentIndex),
-      ),
+        final now = DateTime.now();
 
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        if (_lastPressedAt == null ||
+            now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {
+          _lastPressedAt = now;
 
-      floatingActionButton: FloatingActionButton(
-        elevation: 4,
-        backgroundColor: primaryColor,
-        shape: const CircleBorder(), // নিখুঁত রাউন্ড শেপের জন্য
-        onPressed: () {
-          Get.to(() => const AddTransactionScreen());
-        },
-        child: const Icon(
-          Icons.add_rounded,
-          color: Colors.white,
-          size: 30,
+          CustomToast.showError("Press back again to exit");
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        extendBody: true,
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          switchInCurve: Curves.easeInOut,
+          switchOutCurve: Curves.easeInOut,
+          child: _getSelectedScreen(_currentIndex),
         ),
-      ),
 
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        elevation: 12,
-        color: theme.cardColor,
-        child: SizedBox(
-          height: 68,
-          child: Row(
-            children: [
-              _buildNavItem(
-                index: 0,
-                icon: Icons.dashboard,
-                label: "Dashboard",
-              ),
-              _buildNavItem(
-                index: 1,
-                icon: Icons.pie_chart_rounded,
-                label: "Analytics",
-              ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-              // ফ্লোটিং অ্যাকশন বাটনের জন্য মাঝখানের গ্যাপ
-              const SizedBox(width: 50),
+        floatingActionButton: FloatingActionButton(
+          elevation: 4,
+          backgroundColor: primaryColor,
+          shape: const CircleBorder(),
+          onPressed: () {
+            Get.to(() => const AddTransactionScreen());
+          },
+          child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
+        ),
 
-              _buildNavItem(
-                index: 2,
-                icon: Icons.receipt_long_rounded,
-                label: "Transactions",
-              ),
-              _buildNavItem(
-                index: 3,
-                icon: Icons.settings_rounded,
-                label: "Settings",
-              ),
-            ],
+        bottomNavigationBar: BottomAppBar(
+          shape: const CircularNotchedRectangle(),
+          notchMargin: 8,
+          elevation: isDarkMode ? 2 : 12,
+          color: theme.cardColor,
+          child: SizedBox(
+            height: 68,
+            child: Row(
+              children: [
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.dashboard_rounded,
+                  label: "Dashboard",
+                ),
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.pie_chart_rounded,
+                  label: "Analytics",
+                ),
+
+                const SizedBox(width: 50),
+
+                _buildNavItem(
+                  index: 2,
+                  icon: Icons.receipt_long_rounded,
+                  label: "Transactions",
+                ),
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.settings_rounded,
+                  label: "Settings",
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // কাস্টম ন্যাভিগেশন আইটেম বিল্ডার যা রিয়েল-টাইমে অ্যাক্টিভ স্টেট কালার চেঞ্জ করে
   Widget _buildNavItem({
     required int index,
     required IconData icon,
     required String label,
   }) {
     final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
     final bool isSelected = _currentIndex == index;
+    final bool isDarkMode = theme.brightness == Brightness.dark;
 
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
+        splashColor: primaryColor.withValues(alpha: 0.1),
+        highlightColor: Colors.transparent,
         onTap: () {
           if (_currentIndex != index) {
             setState(() {
@@ -128,25 +141,26 @@ class _BottomScreenState extends State<BottomScreen> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
-          // প্যাডিং কিছুটা কমিয়ে সেফ জোনে আনা হয়েছে
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min, // 💡 সমাধান: কলামটি যেন অতিরিক্ত জায়গা না নেয়
+            mainAxisSize: MainAxisSize.min,
             children: [
               AnimatedScale(
                 duration: const Duration(milliseconds: 250),
                 scale: isSelected ? 1.12 : 1.0,
                 child: Icon(
                   icon,
-                  size: 24, // সাইজ ২৫ থেকে ২৪ করা হয়েছে পারফেক্ট ফিটের জন্য
+                  size: 24,
                   color: isSelected
                       ? primaryColor
-                      : theme.iconTheme.color?.withOpacity(.5) ?? Colors.grey,
+                      : (isDarkMode
+                            ? Colors.grey.shade600
+                            : Colors.grey.shade400),
                 ),
               ),
-              const SizedBox(height: 2), // স্পেসিফিকেশন গ্যাপ কমানো হয়েছে
-              Flexible( // 💡 সমাধান: কোনো কারণে টেক্সট বড় হলেও ক্র্যাশ করবে না
+              const SizedBox(height: 2),
+              Flexible(
                 child: Text(
                   label,
                   maxLines: 1,
@@ -156,7 +170,9 @@ class _BottomScreenState extends State<BottomScreen> {
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     color: isSelected
                         ? primaryColor
-                        : theme.textTheme.bodySmall?.color?.withOpacity(.7) ?? Colors.grey,
+                        : (isDarkMode
+                              ? Colors.grey.shade500
+                              : Colors.grey.shade600),
                   ),
                 ),
               ),
@@ -166,8 +182,4 @@ class _BottomScreenState extends State<BottomScreen> {
       ),
     );
   }
-
-
-
-
 }

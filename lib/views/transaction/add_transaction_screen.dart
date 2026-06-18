@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:my_expense_tracker_hive_database/core/themes/color.dart';
 import '../../controllers/transaction_controller.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_text_field.dart';
@@ -34,21 +35,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (_editTx != null) {
       _isEditMode = true;
 
-      print("====== TX EDIT DATA DEBUG ======");
-      if (_editTx is Map) {
-        print("TX_DATA_TYPE: Map");
-        print("TX_DATA_CONTENT: $_editTx");
-      } else {
-        print("TX_DATA_TYPE: Object (${_editTx.runtimeType})");
-        try {
-          print("TX_DATA_CONTENT (toMap): ${_editTx.toMap()}");
-        } catch (e) {
-          print("TX_DATA_CONTENT (toString): ${_editTx.toString()}");
-        }
-      }
-      print("=================================");
-
-      // 🎯 ডাটা এক্সট্র্যাকশন ও অটো-ফিল ফিক্স
       if (_editTx is Map) {
         titleController.text = (_editTx['title'] ?? "").toString();
         amountController.text = (_editTx['amount'] ?? "").toString();
@@ -59,13 +45,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         amountController.text = (_editTx.amount ?? "").toString();
         _selectedType = _editTx.type ?? 'Expense';
 
-        // 💡 মডেল অবজেক্টের আসল প্রোপার্টি 'note' রিড করা হচ্ছে
         String tempCategory = "";
         try {
           tempCategory = _editTx.note ?? "";
         } catch (_) {}
 
-        // যদি অবজেক্ট প্রোপার্টি খালি থাকে তবে ইন্টারনাল ম্যাপের মাধ্যমে খোঁজার ব্যাকআপ চেষ্টা
         if (tempCategory.isEmpty) {
           try {
             final dynamicAsMap = _editTx.toMap();
@@ -75,7 +59,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         categoryController.text = tempCategory;
       }
 
-      // ডেট ফরম্যাট নিখুঁতভাবে হ্যান্ডেল করার লজিক
       try {
         final dynamic txDate = _editTx is Map ? _editTx['dateTime'] : _editTx.dateTime;
         if (txDate is DateTime) {
@@ -86,9 +69,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       } catch (e) {
         _selectedDateTime = DateTime.now();
       }
-      dateController.text = DateFormat('yyyy-MM-dd').format(_selectedDateTime);
+      // UI-তে সুন্দর করে দেখানোর জন্য ফরম্যাট
+      dateController.text = DateFormat('yyyy-MM-dd • hh:mm a').format(_selectedDateTime);
     } else {
-      dateController.text = DateFormat('yyyy-MM-dd').format(_selectedDateTime);
+      // নিউ ট্রানজেকশনের ক্ষেত্রেও সময় সহ দেখাবে
+      dateController.text = DateFormat('yyyy-MM-dd • hh:mm a').format(_selectedDateTime);
     }
   }
 
@@ -104,10 +89,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     final TransactionController controller = Get.find<TransactionController>();
-    final primaryColor = const Color(0xFF2E7D32);
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F6),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           _isEditMode ? "Edit Transaction" : "Add Transaction",
@@ -128,46 +113,45 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔄 ১. ইনকাম/এক্সপেন্স টগল কার্ড
               Row(
                 children: [
                   _buildTypeSelectionCard(
+                    context: context,
                     type: 'Expense',
                     label: 'Expense',
-                    icon: Icons.arrow_upward_rounded,
-                    activeColor: Colors.red.shade700,
-                    backgroundColor: Colors.red.shade50,
+                    icon: Icons.south_west_rounded,
+                    activeColor: isDarkMode ? const Color(0xFFE57373) : Colors.red.shade700,
+                    backgroundColor: isDarkMode ? const Color(0xFF421D1D) : Colors.red.shade50,
                   ),
                   const SizedBox(width: 16),
                   _buildTypeSelectionCard(
+                    context: context,
                     type: 'Income',
                     label: 'Income',
-                    icon: Icons.arrow_downward_rounded,
-                    activeColor: Colors.green.shade700,
-                    backgroundColor: Colors.green.shade50,
+                    icon: Icons.north_east_rounded,
+                    activeColor: isDarkMode ? const Color(0xFF81C784) : primaryColor,
+                    backgroundColor: isDarkMode ? const Color(0xFF1B3A24) : Colors.green.shade50,
                   ),
                 ],
               ),
 
               const SizedBox(height: 28),
-              _buildSectionTitle("Transaction Details"),
+              _buildSectionTitle(context, "Transaction Details"),
               const SizedBox(height: 12),
 
-              // 📝 ২. টাইটেল কাস্টম টেক্সট ফিল্ড
               CustomTextField(
                 controller: titleController,
                 hintText: "Title (e.g., Salary, Rent, Grocery)",
                 prefixIcon: Icons.edit_note_rounded,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return "দয়া করে একটি সঠিক টাইটেল দিন";
+                    return "Please enter a valid title";
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // 💰 ৩. অ্যামাউন্ট কাস্টম টেক্সট ফিল্ড
               CustomTextField(
                 controller: amountController,
                 hintText: "Amount (৳)",
@@ -178,14 +162,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ],
                 validator: (value) {
                   if (value == null || double.tryParse(value) == null || double.parse(value) <= 0) {
-                    return "সঠিক টাকার পরিমাণ উল্লেখ করুন";
+                    return "Please enter a valid amount";
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // 📅 ৪. কাস্টম ডেট পিকার ফিল্ড
               CustomTextField(
                 controller: dateController,
                 hintText: "Select Date",
@@ -200,7 +183,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     builder: (context, child) {
                       return Theme(
                         data: Theme.of(context).copyWith(
-                          colorScheme: ColorScheme.light(
+                          colorScheme: isDarkMode
+                              ? const ColorScheme.dark(
+                            primary: primaryColor,
+                            onPrimary: Colors.white,
+                            surface: Color(0xFF1E1E1E),
+                            onSurface: Colors.white,
+                          )
+                              : const ColorScheme.light(
                             primary: primaryColor,
                             onPrimary: Colors.white,
                             onSurface: Colors.black,
@@ -210,17 +200,27 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       );
                     },
                   );
+
                   if (pickedDate != null) {
                     setState(() {
-                      _selectedDateTime = pickedDate;
-                      dateController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
+                      // 🎯 ফিক্স: সিলেক্টেড ডেটের সাথে নিখুঁত কারেন্ট টাইম মার্জ করা হলো
+                      final now = DateTime.now();
+                      _selectedDateTime = DateTime(
+                        pickedDate.year,
+                        pickedDate.month,
+                        pickedDate.day,
+                        now.hour,
+                        now.minute,
+                        now.second,
+                      );
+                      // UI টেক্সট আপডেট
+                      dateController.text = DateFormat('yyyy-MM-dd • hh:mm a').format(_selectedDateTime);
                     });
                   }
                 },
               ),
               const SizedBox(height: 16),
 
-              // ✉️ ৫. ক্যাটাগরি/নোট ফিল্ড
               CustomTextField(
                 controller: categoryController,
                 hintText: "Category or Short Note (Optional)",
@@ -230,7 +230,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
               const SizedBox(height: 40),
 
-              // 🚀 ৬. কাস্টম বাটন
               Obx(() => CustomButton(
                 title: _isEditMode ? "Update Transaction" : "Save Transaction",
                 icon: Icons.check_circle_outline_rounded,
@@ -238,7 +237,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 isLoading: controller.isLoading.value,
                 onTap: () async {
                   if (_formKey.currentState!.validate()) {
-                    final String formattedDateStr = dateController.text;
+                    final String isoDateStr = _selectedDateTime.toIso8601String();
                     bool success = false;
 
                     if (_isEditMode) {
@@ -247,7 +246,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         title: titleController.text.trim(),
                         amount: double.parse(amountController.text),
                         type: _selectedType,
-                        date: formattedDateStr,
+                        date: isoDateStr,
                         note: categoryController.text.trim().isEmpty ? null : categoryController.text.trim(),
                       );
                     } else {
@@ -255,7 +254,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         title: titleController.text.trim(),
                         amount: double.parse(amountController.text),
                         type: _selectedType,
-                        date: formattedDateStr,
+                        date: isoDateStr,
                         note: categoryController.text.trim().isEmpty ? null : categoryController.text.trim(),
                       );
                     }
@@ -273,19 +272,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF616161),
+        color: isDarkMode ? Colors.grey.shade400 : const Color(0xFF616161),
         letterSpacing: 0.3,
       ),
     );
   }
 
   Widget _buildTypeSelectionCard({
+    required BuildContext context,
     required String type,
     required String label,
     required IconData icon,
@@ -293,17 +294,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     required Color backgroundColor,
   }) {
     final bool isSelected = _selectedType == type;
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Expanded(
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         height: 56,
         child: Material(
-          color: isSelected ? backgroundColor : Colors.white,
+          color: isSelected
+              ? backgroundColor
+              : (isDarkMode ? const Color(0xFF1E1E1E) : Colors.white),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: isSelected ? activeColor : Colors.grey.shade200,
+              color: isSelected
+                  ? activeColor
+                  : (isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200),
               width: isSelected ? 2 : 1.5,
             ),
           ),
@@ -319,7 +325,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? activeColor : Colors.grey.shade400,
+                  color: isSelected ? activeColor : (isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400),
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -328,7 +334,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected ? activeColor : Colors.grey.shade600,
+                    color: isSelected ? activeColor : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
                   ),
                 ),
               ],

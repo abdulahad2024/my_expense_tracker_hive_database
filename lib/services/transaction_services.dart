@@ -11,7 +11,6 @@ class TransactionServices {
     }
   }
 
-  // --- CREATE ---
   static Future<void> addTransaction({
     required String title,
     required double amount,
@@ -22,20 +21,18 @@ class TransactionServices {
     final box = Hive.box(transactionBox);
     String id = DateTime.now().millisecondsSinceEpoch.toString();
 
-    // 🎯 ফিক্স: মডেলের fromMap-এর সাথে মিলিয়ে key নাম 'dateTime' এবং 'category' দেওয়া হলো
     Map<String, dynamic> transactionData = {
       'id': id,
       'title': title,
       'amount': amount,
       'type': type,
-      'dateTime': date, // মডেল 'dateTime' রিড করে
-      'category': note ?? '', // মডেল 'category' রিড করে
+      'dateTime': date,
+      'category': note ?? '',
     };
 
     await box.put(id, transactionData);
   }
 
-  // --- READ ---
   static List<TransactionModel> getAllTransactions() {
     final box = Hive.box(transactionBox);
     List<TransactionModel> transactions = [];
@@ -43,13 +40,27 @@ class TransactionServices {
     for (var key in box.keys) {
       final data = box.get(key);
       if (data is Map) {
-        transactions.add(TransactionModel.fromMap(data));
+        try {
+          transactions.add(
+            TransactionModel.fromMap(Map<dynamic, dynamic>.from(data)),
+          );
+        } catch (e) {
+          print("Error parsing transaction key $key: $e");
+        }
       }
     }
-    return transactions.reversed.toList();
+
+    transactions.sort((a, b) {
+      int dateCompare = b.dateTime.compareTo(a.dateTime);
+      if (dateCompare != 0) {
+        return dateCompare;
+      }
+      return b.id.compareTo(a.id);
+    });
+
+    return transactions;
   }
 
-  // --- UPDATE ---
   static Future<void> updateTransaction({
     required String id,
     required String title,
@@ -60,7 +71,6 @@ class TransactionServices {
   }) async {
     final box = Hive.box(transactionBox);
 
-    // 🎯 ফিক্স: আপডেট করার সময়ও যেন একই key নামে ডাটাবেজে ডাটা মডিফাই হয়
     Map<String, dynamic> updatedData = {
       'id': id,
       'title': title,
@@ -73,7 +83,6 @@ class TransactionServices {
     await box.put(id, updatedData);
   }
 
-  // --- DELETE ---
   static Future<void> deleteTransaction(String id) async {
     final box = Hive.box(transactionBox);
     await box.delete(id);
